@@ -155,7 +155,7 @@ const Landing = () => {
               fw={900}
               gradient={{ from: "orange", to: "red", deg: 330 }}
             >
-              GO TO LOBBY - TEST
+              Start now
             </Button>
           </Stack>
         </Container>

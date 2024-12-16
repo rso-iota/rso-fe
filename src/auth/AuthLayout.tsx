@@ -36,8 +36,6 @@ const AuthLayout = () => {
     return <ErrorBox message="You are not authenticated" />;
   }
 
-  console.log(auth.user);
-
   return <Box h="100%">{outlet}</Box>;
 };
 
