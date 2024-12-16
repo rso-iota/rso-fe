@@ -16,7 +16,7 @@
     "@mantine/charts": "^7.14.1",
     "@mantine/core": "^7.14.1",
     "@mantine/dates": "^7.14.1",
-    "@mantine/form": "^7.14.1",
+    "@mantine/form": "^7.15.1",
     "@mantine/hooks": "^7.14.1",
     "@mantine/modals": "^7.14.1",
     "@mantine/notifications": "^7.14.1",
@@ -29,6 +29,7 @@
     "@types/three": "^0.170.0",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
+    "mantine-form-zod-resolver": "^1.1.0",
     "oidc-client-ts": "^3.1.0",
     "qs": "^6.13.1",
     "react": "^18.3.1",
@@ -36,7 +37,8 @@
     "react-oidc-context": "^3.1.0",
     "react-router-dom": "^6.28.0",
     "recharts": "2",
-    "three": "^0.171.0"
+    "three": "^0.171.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
