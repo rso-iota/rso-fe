@@ -14,7 +14,6 @@ import {
   Stack,
   Text,
   ThemeIcon,
-  Title,
   useMantineTheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
