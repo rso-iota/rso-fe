@@ -7,3 +7,4 @@
 
 export * from "./outError";
 export * from "./outUserLookup";
+export * from "./userInfoOut";

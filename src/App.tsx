@@ -17,6 +17,7 @@ import { onSigninCallback, userManager } from "./auth/authConfig";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { theme } from "./theme";
 import { queryClient } from "./queryClient";
+import { ModalsProvider } from "@mantine/modals";
 
 function App() {
   return (
@@ -24,12 +25,14 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ReactQueryDevtools initialIsOpen={false} />
         <MantineProvider theme={theme}>
-          <DatesProvider settings={{ locale: "sl-SI" }}>
-            <Notifications position="bottom-right" zIndex={10000000000000} />
-            <Suspense fallback={<></>}>
-              <RouterProvider router={router} />
-            </Suspense>
-          </DatesProvider>
+          <ModalsProvider>
+            <DatesProvider settings={{ locale: "sl-SI" }}>
+              <Notifications position="bottom-right" zIndex={10000000000000} />
+              <Suspense fallback={<></>}>
+                <RouterProvider router={router} />
+              </Suspense>
+            </DatesProvider>
+          </ModalsProvider>
         </MantineProvider>
       </QueryClientProvider>
     </AuthProvider>

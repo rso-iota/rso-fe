@@ -4,13 +4,17 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
+import type { OutLiveData } from "./outLiveData";
 
 export interface OutLobby {
+  archived: boolean;
   createdAt: string;
   currentPlayers: number;
-  description: string;
+  gameId: string;
   id: string;
+  liveData: OutLiveData[];
   maxPlayers: number;
   name: string;
   owner: string;
+  serverId: string;
 }

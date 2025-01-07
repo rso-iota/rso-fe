@@ -5,11 +5,7 @@
  * OpenAPI spec version: v0
  */
 
-export interface CreateLobby {
-  /**
-   * @minimum 2
-   * @maximum 10
-   */
-  maxPlayers: number;
-  name: string;
+export interface OutLiveData {
+  size: number;
+  username: string;
 }
