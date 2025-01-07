@@ -6,6 +6,7 @@
  */
 
 export interface OutUserLookup {
+  id: string;
   me: boolean;
   username: string;
 }

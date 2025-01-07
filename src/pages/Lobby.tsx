@@ -224,9 +224,15 @@ const Lobby = () => {
                   {user.username.charAt(0).toUpperCase()}
                 </Avatar>
 
-                <Text size="sm" fw="bold">
-                  {user.username}
-                </Text>
+                <Flex direction="column">
+                  <Text size="sm" fw="bold">
+                    {user.username}
+                  </Text>
+
+                  <Badge variant="light" size="xs">
+                    Id za Mateja:) {user.id}
+                  </Badge>
+                </Flex>
               </Flex>
             </Paper>
           ))}
