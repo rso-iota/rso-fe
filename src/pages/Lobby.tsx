@@ -27,23 +27,25 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { modals } from "@mantine/modals";
 import { showNotification } from "@mantine/notifications";
 import {
   IconHash,
   IconLogout,
   IconPlayerPlay,
   IconPlus,
+  IconRefresh,
   IconServer,
   IconTopologyRing,
   IconTrash,
   IconUser,
 } from "@tabler/icons-react";
 import { useAuth } from "react-oidc-context";
-import { modals } from "@mantine/modals";
 
 import { useForm, zodResolver } from "@mantine/form";
-import { z } from "zod";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 const schema = z.object({
   name: z.string().min(2).max(20),
@@ -65,9 +67,19 @@ const Lobby = () => {
   });
   const theme = useMantineTheme();
 
-  const { data, queryKey } = useGetLobbyList();
+  const { data, queryKey, refetch, isFetching } = useGetLobbyList();
   const { mutateAsync: createLobbyApi } = useCreateLobby();
   const { data: usersData } = useGetOnlineUsers();
+
+  // refecth lobby data every 10 seconds
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   const { mutateAsync: deleteLobbyApi } = useDeleteLobby();
 
@@ -245,15 +257,25 @@ const Lobby = () => {
                     <Text size="sm">Join or create a lobby</Text>
                   </Flex>
                 </Flex>
-                <Button
-                  onClick={demo}
-                  color="orange"
-                  variant="white"
-                  leftSection={<IconPlus />}
-                  style={{ boxShadow: theme.shadows.sm }}
-                >
-                  Create lobby
-                </Button>
+                <Group>
+                  <ActionIcon
+                    onClick={() => refetch()}
+                    variant="light"
+                    size="lg"
+                    disabled={isFetching}
+                  >
+                    <IconRefresh style={{ width: rem(16), height: rem(16) }} />
+                  </ActionIcon>
+                  <Button
+                    onClick={demo}
+                    color="orange"
+                    variant="white"
+                    leftSection={<IconPlus />}
+                    style={{ boxShadow: theme.shadows.sm }}
+                  >
+                    Create lobby
+                  </Button>
+                </Group>
               </Flex>
               <Stack gap="sm">
                 {(data ?? []).map((lobby) => (
