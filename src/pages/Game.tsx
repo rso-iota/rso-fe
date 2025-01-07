@@ -1,9 +1,8 @@
-import { Box, Button, Flex } from "@mantine/core";
-import { useEffect, useRef, useCallback } from "react";
+import { Button, Card, Flex } from "@mantine/core";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "react-oidc-context";
 import { useNavigate, useParams } from "react-router-dom";
 
-// Types
 interface Circle {
   x: number;
   y: number;
@@ -31,8 +30,47 @@ interface GameState {
   food: Food[];
 }
 
+const updateFood = (
+  foodData: Food[],
+  ref: React.MutableRefObject<Record<string, Circle>>
+) => {
+  foodData.forEach((f) => {
+    ref.current[f.index] = {
+      x: f.circle.x,
+      y: f.circle.y,
+      radius: f.circle.radius,
+    };
+  });
+};
+
+const updatePlayers = (
+  playerData: GameState["players"],
+  playerNameRef: React.MutableRefObject<string>,
+  playerRef: React.MutableRefObject<Player | null>,
+  otherPlayersRef: React.MutableRefObject<Record<string, Player>>
+) => {
+  playerData.forEach((p) => {
+    if (p.playerName === playerNameRef.current) {
+      playerRef.current = {
+        x: p.circle.x,
+        y: p.circle.y,
+        r: p.circle.radius,
+        alive: p.alive,
+      };
+    } else {
+      otherPlayersRef.current[p.playerName] = {
+        x: p.circle.x,
+        y: p.circle.y,
+        r: p.circle.radius,
+        alive: p.alive,
+      };
+    }
+  });
+};
+
 interface WebSocketMessage {
   type: "spawn" | "gameState" | "update" | "playerLeft";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
 }
 
@@ -45,97 +83,63 @@ const Game = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const animationFrameRef = useRef<number>();
   const playerRef = useRef<Player | null>(null);
+
+  const [start, setStart] = useState(false);
+
   const otherPlayersRef = useRef<Record<string, Player>>({});
   const foodRef = useRef<Record<string, Circle>>({});
   const playerNameRef = useRef(`player${Math.floor(Math.random() * 1000)}`);
 
-  const parseJwt = (token: string) => {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      window
-        .atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  };
+  // Camera and zoom settings
+  const ZOOM = 2; // 200% zoom
+  const CANVAS_WIDTH = 800;
+  const CANVAS_HEIGHT = 600;
+  const VIEWPORT_WIDTH = CANVAS_WIDTH / ZOOM;
+  const VIEWPORT_HEIGHT = CANVAS_HEIGHT / ZOOM;
 
-  const getToken = useCallback(() => {
-    if (auth.user?.id_token) {
-      playerNameRef.current = parseJwt(auth.user.id_token).preferred_username;
-      return auth.user.id_token;
+  const handleMessage = useCallback((msg: MessageEvent) => {
+    const message: WebSocketMessage = JSON.parse(msg.data);
+
+    setStart(true);
+
+    switch (message.type) {
+      case "spawn":
+        otherPlayersRef.current[message.data.playerName] = {
+          x: message.data.circle.x,
+          y: message.data.circle.y,
+          r: message.data.circle.radius,
+          alive: message.data.alive,
+        };
+        break;
+      case "gameState":
+      case "update":
+        updatePlayers(
+          message.data.players,
+          playerNameRef,
+          playerRef,
+          otherPlayersRef
+        );
+        updateFood(message.data.food, foodRef);
+        break;
+      case "playerLeft":
+        delete otherPlayersRef.current[message.data.playerName];
+        break;
     }
-    return "";
-  }, [auth.user]);
-
-  const updatePlayers = useCallback((playerData: GameState["players"]) => {
-    playerData.forEach((p) => {
-      if (p.playerName === playerNameRef.current) {
-        playerRef.current = {
-          x: p.circle.x,
-          y: p.circle.y,
-          r: p.circle.radius,
-          alive: p.alive,
-        };
-      } else {
-        otherPlayersRef.current[p.playerName] = {
-          x: p.circle.x,
-          y: p.circle.y,
-          r: p.circle.radius,
-          alive: p.alive,
-        };
-      }
-    });
   }, []);
-
-  const updateFood = useCallback((foodData: Food[]) => {
-    foodData.forEach((f) => {
-      foodRef.current[f.index] = {
-        x: f.circle.x,
-        y: f.circle.y,
-        radius: f.circle.radius,
-      };
-    });
-  }, []);
-
-  const handleMessage = useCallback(
-    (msg: MessageEvent) => {
-      const message: WebSocketMessage = JSON.parse(msg.data);
-
-      switch (message.type) {
-        case "spawn":
-          otherPlayersRef.current[message.data.playerName] = {
-            x: message.data.circle.x,
-            y: message.data.circle.y,
-            r: message.data.circle.radius,
-            alive: message.data.alive,
-          };
-          break;
-        case "gameState":
-        case "update":
-          updatePlayers(message.data.players);
-          updateFood(message.data.food);
-          break;
-        case "playerLeft":
-          delete otherPlayersRef.current[message.data.playerName];
-          break;
-      }
-    },
-    [updatePlayers, updateFood]
-  );
 
   const connectToGame = useCallback(async () => {
+    if (!auth.user) return;
+
     if (wsRef.current) {
       wsRef.current.close();
       otherPlayersRef.current = {};
       foodRef.current = {};
     }
 
-    // const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    playerNameRef.current = auth.user.profile.preferred_username || "";
+
     const ws = new WebSocket(
-      `wss://rso-2.janvasiljevic.com/server/${serverId}/connect/${gameId}?token=${getToken()}`
+      `wss://rso-2.janvasiljevic.com/server/${serverId}/connect/${gameId}?token=${auth.user.id_token}`
     );
 
     ws.onopen = () => {
@@ -149,15 +153,21 @@ const Game = () => {
 
     ws.onmessage = handleMessage;
     wsRef.current = ws;
-  }, [gameId, getToken, handleMessage]);
+  }, [auth.user, serverId, gameId, handleMessage]);
 
   useEffect(() => {
+    connectToGame();
+  }, [connectToGame]);
+
+  useEffect(() => {
+    if (!start) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     // Set initial canvas size
-    canvas.width = 800;
-    canvas.height = 600;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -179,22 +189,17 @@ const Game = () => {
     window.addEventListener("keyup", handleKeyUp);
 
     const drawGame = () => {
-      // Clear with background
-      ctx.fillStyle = "#f0f0f0";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (!ctx || !playerRef.current) return;
 
-      // Draw debug grid
-      ctx.strokeStyle = "#ddd";
-      ctx.beginPath();
-      for (let i = 0; i < canvas.width; i += 50) {
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, canvas.height);
-      }
-      for (let i = 0; i < canvas.height; i += 50) {
-        ctx.moveTo(0, i);
-        ctx.lineTo(canvas.width, i);
-      }
-      ctx.stroke();
+      const cameraX = playerRef.current.x - VIEWPORT_WIDTH / 2;
+      const cameraY = playerRef.current.y - VIEWPORT_HEIGHT / 2;
+
+      ctx.fillStyle = "#f0f0f0";
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      ctx.save();
+      ctx.scale(ZOOM, ZOOM);
+      ctx.translate(-cameraX, -cameraY);
 
       let dx = 0;
       let dy = 0;
@@ -215,6 +220,54 @@ const Game = () => {
         );
       }
 
+      // Draw a grid for reference (optional)
+      const gridSize = 50;
+      ctx.strokeStyle = "#ddd";
+      ctx.lineWidth = 0.5;
+
+      const startX = Math.floor(cameraX / gridSize) * gridSize;
+      const startY = Math.floor(cameraY / gridSize) * gridSize;
+      const endX = startX + VIEWPORT_WIDTH + gridSize;
+      const endY = startY + VIEWPORT_HEIGHT + gridSize;
+
+      for (let x = startX; x <= endX; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
+        ctx.stroke();
+      }
+      for (let y = startY; y <= endY; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
+        ctx.stroke();
+      }
+
+      // Draw food
+      Object.values(foodRef.current).forEach((f) => {
+        ctx.fillStyle = "blue";
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.radius, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+
+      // Draw other players
+      Object.entries(otherPlayersRef.current).forEach(([name, p]) => {
+        if (!p.alive) return;
+
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Scale the text size down since we're zoomed
+        ctx.fillStyle = "black";
+        ctx.font = `${10 / ZOOM}px Arial`;
+        const halfWidth = ctx.measureText(name).width / 2;
+        const height = (5 + p.r) / ZOOM;
+        ctx.fillText(name, p.x - halfWidth, p.y - height);
+      });
+
       // Draw player
       if (playerRef.current?.alive) {
         ctx.fillStyle = "green";
@@ -229,34 +282,12 @@ const Game = () => {
         ctx.fill();
       }
 
-      // Draw other players
-      Object.entries(otherPlayersRef.current).forEach(([name, p]) => {
-        if (!p.alive) return;
-
-        ctx.fillStyle = "red";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
-        ctx.fill();
-
-        ctx.fillStyle = "black";
-        ctx.font = "20px Arial";
-        const halfWidth = ctx.measureText(name).width / 2;
-        const height = 10 + p.r;
-        ctx.fillText(name, p.x - halfWidth, p.y - height);
-      });
-
-      // Draw food
-      Object.values(foodRef.current).forEach((f) => {
-        ctx.fillStyle = "blue";
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, f.radius, 0, 2 * Math.PI);
-        ctx.fill();
-      });
+      // Restore the canvas context
+      ctx.restore();
 
       animationFrameRef.current = requestAnimationFrame(drawGame);
     };
 
-    connectToGame();
     drawGame();
 
     return () => {
@@ -269,7 +300,7 @@ const Game = () => {
         wsRef.current.close();
       }
     };
-  }, [connectToGame]);
+  }, [VIEWPORT_HEIGHT, VIEWPORT_WIDTH, start]);
 
   return (
     <Flex w="100%" h="100vh" direction="column">
@@ -278,12 +309,14 @@ const Game = () => {
       </Flex>
 
       <Flex w="100%" h="100%" justify="center" align="center">
-        <Box
+        <Card
           w="800px"
           h="600px"
-          bg="dimmed"
           p="xs"
           style={{ position: "relative" }}
+          withBorder
+          radius="xl"
+          shadow="lg"
         >
           <canvas
             ref={canvasRef}
@@ -298,7 +331,7 @@ const Game = () => {
               background: "#f0f0f0",
             }}
           />
-        </Box>
+        </Card>
       </Flex>
     </Flex>
   );

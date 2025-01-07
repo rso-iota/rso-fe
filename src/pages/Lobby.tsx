@@ -128,8 +128,6 @@ const Lobby = () => {
   };
 
   const onFormSubmit = async (values: LobbyForm) => {
-    console.log(values);
-
     createLobbyApi({
       data: values,
     })
