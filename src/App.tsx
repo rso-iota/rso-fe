@@ -9,6 +9,7 @@ import router from "./router";
 
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
+import "@mantine/carousel/styles.css";
 
 import { AuthProvider } from "react-oidc-context";
 import { onSigninCallback, userManager } from "./auth/authConfig";

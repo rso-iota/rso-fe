@@ -3,6 +3,7 @@ import {
   useDeleteLobby,
   useGetLobbyList,
 } from "@/api/lobby/lobby/lobby";
+import Autoplay from "embla-carousel-autoplay";
 import { useGetOnlineUsers } from "@/api/users/users/users";
 import { queryClient } from "@/queryClient";
 import {
@@ -22,6 +23,9 @@ import {
   NumberInput,
   Paper,
   rem,
+  RingProgress,
+  SimpleGrid,
+  Skeleton,
   Stack,
   Text,
   TextInput,
@@ -33,6 +37,7 @@ import { modals } from "@mantine/modals";
 import { showNotification } from "@mantine/notifications";
 import {
   IconBurger,
+  IconGraph,
   IconHash,
   IconLogout,
   IconPlayerPlay,
@@ -41,6 +46,7 @@ import {
   IconServer,
   IconSkull,
   IconSword,
+  IconTable,
   IconTopologyRing,
   IconTrash,
   IconUser,
@@ -49,14 +55,16 @@ import {
 import { useAuth } from "react-oidc-context";
 
 import { useForm, zodResolver } from "@mantine/form";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { Carousel } from "@mantine/carousel";
 
 import { graphql } from "@/graphql";
 import { execute } from "@/graphql/execute";
 import { useQuery } from "@tanstack/react-query";
 import { AXIOS_INSTANCE } from "@/api/mutator/custom-instance";
+import { QueryQuery } from "@/graphql/graphql";
 
 const schema = z.object({
   name: z.string().min(2).max(20),
@@ -80,6 +88,8 @@ const playerStatsQuery = graphql(`
     }
   }
 `);
+
+type GlobalStats = typeof playerStatsQuery;
 
 type LobbyForm = z.infer<typeof schema>;
 
@@ -270,48 +280,42 @@ const Lobby = () => {
         <Flex gap="sm" direction="column">
           {(playersWithStats || []).map((user) => (
             <Paper p="sm" px="lg" withBorder key={user.username}>
-              <Flex justify="space-between" align="center">
-                <Avatar color="blue" size="sm">
-                  {user.username.charAt(0).toUpperCase()}
-                </Avatar>
-                <IconBurger />
-                <Text size="sm">{user.foodEaten}</Text>
-                <IconSword />
-                <Text size="sm">{user.kills}</Text>
-                <IconSkull />
-                <Text size="sm">{user.deaths}</Text>
+              <Stack>
+                <Flex justify="left" align="center" gap="sm">
+                  <Avatar color="blue" size="sm">
+                    {user.username.charAt(0).toUpperCase()}
+                  </Avatar>
 
-                <Flex direction="column">
                   <Text size="sm" fw="bold">
                     {user.username}
                   </Text>
                 </Flex>
-              </Flex>
+                <Flex w="100%" justify="end">
+                  <Badge
+                    leftSection={<IconSword />}
+                    variant="subtle"
+                    color="green"
+                  >
+                    {user.kills}
+                  </Badge>
+                  <Badge
+                    leftSection={<IconBurger />}
+                    variant="subtle"
+                    color="blue"
+                  >
+                    {user.foodEaten}
+                  </Badge>
+                  <Badge
+                    leftSection={<IconSkull />}
+                    variant="subtle"
+                    color="red"
+                  >
+                    {user.deaths}
+                  </Badge>
+                </Flex>
+              </Stack>
             </Paper>
           ))}
-          <Text size="sm" fw={900} mb="sm">
-            Global statistics
-          </Text>
-          <Flex gap="sm" direction="column">
-            Players
-            <Flex gap="sm">
-              <IconBurger />
-              <Text size="sm">{statistics?.stats?.playerFoodEaten}</Text>
-              <IconSword />
-              <Text size="sm">{statistics?.stats?.playerKills}</Text>
-              <IconSkull />
-              <Text size="sm">{statistics?.stats?.playerDeaths}</Text>
-            </Flex>
-            Bot uprising
-            <Flex gap="sm">
-              <IconBurger />
-              <Text size="sm">{statistics?.stats?.botFoodEaten}</Text>
-              <IconSword />
-              <Text size="sm">{statistics?.stats?.botKills}</Text>
-              <IconSkull />
-              <Text size="sm">{statistics?.stats?.botDeaths}</Text>
-            </Flex>
-          </Flex>
         </Flex>
       </AppShell.Navbar>
 
@@ -319,6 +323,8 @@ const Lobby = () => {
         <Flex w="100%" direction="column">
           <Container w="100%">
             <Stack>
+              <StatsCarousel stats={statistics?.stats} />
+
               <Flex justify="space-between" align="center">
                 <Flex direction="row" align={"center"} justify={"flex-start"}>
                   <ThemeIcon
@@ -360,14 +366,16 @@ const Lobby = () => {
               <Stack gap="sm">
                 {(data ?? []).map((lobby) => (
                   <Paper withBorder p="sm" px="lg" key={lobby.id}>
-                    <Stack gap="sm">
+                    <Stack gap="md">
                       <Flex justify="space-between" align="center">
                         <Text
                           size="xl"
                           fw="bold"
                           opacity={lobby.archived ? 0.5 : 1}
                         >
-                          {lobby.name}
+                          {lobby.archived
+                            ? `Archived:  ${lobby.name}`
+                            : lobby.name}
                         </Text>
                         {!lobby.archived ? (
                           <Group>
@@ -409,7 +417,6 @@ const Lobby = () => {
                         ) : (
                           <Group>
                             <VideoStreamModal gameId={lobby.gameId} />
-                            <Text c="dimmed">Archived</Text>
                           </Group>
                         )}
                       </Flex>
@@ -461,7 +468,7 @@ const Lobby = () => {
                               >
                                 {data.username.charAt(0).toUpperCase()}
                               </Avatar>
-                              <Text>{data.size}</Text>
+                              <Text>{data.size.toFixed(0)}</Text>
                             </Flex>
                           ))
                         ) : (
@@ -483,6 +490,152 @@ const Lobby = () => {
     </AppShell>
   );
 };
+
+type Props = {
+  stats: QueryQuery["stats"];
+};
+
+const StatsCarousel = ({ stats }: Props) => {
+  const autoplay = useRef(Autoplay({ delay: 6000 }));
+  const [slide, setSlide] = useState(0);
+
+  if (!stats) {
+    return (
+      <SimpleGrid cols={3}>
+        <Skeleton height={100} />
+        <Skeleton height={100} />
+        <Skeleton height={100} />
+      </SimpleGrid>
+    );
+  }
+
+  return (
+    <Stack>
+      <Flex direction="row" align={"center"} justify={"flex-start"}>
+        <ThemeIcon
+          variant="transparent"
+          size="xl"
+          mr="sm"
+          fw={900}
+          color="purple"
+        >
+          <IconGraph />
+        </ThemeIcon>
+        <Flex direction={"column"}>
+          <Text size="xl" fw="bold">
+            Global statistics
+          </Text>
+          <Text size="sm">{slide === 0 ? "Bot uprising" : "Player stats"}</Text>
+        </Flex>
+      </Flex>
+      <Carousel
+        onSlideChange={setSlide}
+        plugins={[autoplay.current]}
+        onMouseEnter={autoplay.current.stop}
+        onMouseLeave={autoplay.current.reset}
+        loop
+      >
+        <Carousel.Slide>
+          <StatsRing
+            data={[
+              {
+                label: "Kills",
+                icon: <IconSword />,
+                stats: stats.botKills.toString(),
+                color: "green",
+              },
+              {
+                label: "Food eaten",
+                icon: <IconBurger />,
+                stats: stats.botFoodEaten.toString(),
+                color: "blue",
+              },
+              {
+                label: "Deaths",
+                icon: <IconSkull />,
+                stats: stats.botDeaths.toString(),
+                color: "red",
+              },
+            ]}
+          />
+        </Carousel.Slide>
+        <Carousel.Slide>
+          <StatsRing
+            data={[
+              {
+                label: "Kills",
+                icon: <IconSword />,
+                stats: stats.playerKills.toString(),
+                color: "green",
+              },
+              {
+                label: "Food eaten",
+                icon: <IconBurger />,
+                stats: stats.playerFoodEaten.toString(),
+                color: "blue",
+              },
+              {
+                label: "Deaths",
+                icon: <IconSkull />,
+                stats: stats.playerDeaths.toString(),
+                color: "red",
+              },
+            ]}
+          />
+        </Carousel.Slide>
+      </Carousel>
+    </Stack>
+  );
+};
+
+type StastProps = {
+  data: {
+    label: string;
+    icon: React.ReactNode;
+    stats: string;
+    color: string;
+  }[];
+};
+
+export function StatsRing({ data }: StastProps) {
+  const stats = data.map((stat) => {
+    return (
+      <Paper withBorder radius="md" p="xs" key={stat.label}>
+        <Group>
+          <RingProgress
+            size={80}
+            roundCaps
+            thickness={8}
+            sections={[{ value: 100, color: stat.color }]}
+            label={
+              <Center>
+                <ThemeIcon
+                  variant="transparent"
+                  size="xl"
+                  color={stat.color}
+                  style={{ margin: "0 auto" }}
+                >
+                  {stat.icon}
+                </ThemeIcon>
+              </Center>
+            }
+          />
+
+          <div>
+            <Text c="dimmed" size="xs" tt="uppercase" fw={700}>
+              {stat.label}
+            </Text>
+            <Text fw={700} size="xl">
+              {stat.stats}
+            </Text>
+          </div>
+        </Group>
+      </Paper>
+    );
+  });
+
+  return <SimpleGrid cols={{ base: 1, sm: 3 }}>{stats}</SimpleGrid>;
+}
 
 const VideoStreamModal = ({ gameId }: { gameId: string }) => {
   const [opened, setOpened] = useState(false);
@@ -523,8 +676,14 @@ const VideoStreamModal = ({ gameId }: { gameId: string }) => {
 
   return (
     <div>
-      <Button onClick={handleOpen}>
-        <IconVideo />
+      <Button
+        onClick={handleOpen}
+        leftSection={<IconVideo />}
+        color="indigo"
+        variant="subtle"
+      >
+        {" "}
+        Replay
       </Button>
 
       <Modal

@@ -13,6 +13,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@mantine/carousel": "^7.15.3",
     "@mantine/charts": "^7.14.1",
     "@mantine/core": "^7.14.1",
     "@mantine/dates": "^7.14.1",
@@ -29,6 +30,8 @@
     "@types/three": "^0.170.0",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
+    "embla-carousel-autoplay": "^7.1.0",
+    "embla-carousel-react": "^7.1.0",
     "graphql": "^16.10.0",
     "mantine-form-zod-resolver": "^1.1.0",
     "oidc-client-ts": "^3.1.0",
