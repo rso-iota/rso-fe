@@ -35,6 +35,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import { showNotification } from "@mantine/notifications";
 import {
+  IconBrandDiscord,
   IconBurger,
   IconGraph,
   IconHash,
@@ -454,24 +455,38 @@ const Lobby = () => {
                           Game id: {lobby.gameId}
                         </Badge>
                       </Flex>
-                      <Flex gap={"xs"}>
-                        {lobby.currentPlayers > 0 ? (
-                          (lobby.liveData || []).map((data) => (
-                            <Flex key={data.username + lobby.id + lobby.gameId}>
-                              <Avatar
-                                color="blue"
-                                size="sm"
-                                style={{ marginRight: theme.spacing.xs }}
+                      <Flex align="center" gap="sm">
+                        <Flex gap={"xs"}>
+                          {lobby.currentPlayers > 0 ? (
+                            (lobby.liveData || []).map((data) => (
+                              <Flex
+                                key={data.username + lobby.id + lobby.gameId}
                               >
-                                {data.username.charAt(0).toUpperCase()}
-                              </Avatar>
-                              <Text>{data.size.toFixed(0)}</Text>
-                            </Flex>
-                          ))
-                        ) : (
-                          <Text size="sm" color="gray">
-                            No players in the lobby at the moment
-                          </Text>
+                                <Avatar
+                                  color="blue"
+                                  size="sm"
+                                  style={{ marginRight: theme.spacing.xs }}
+                                >
+                                  {data.username.charAt(0).toUpperCase()}
+                                </Avatar>
+                                <Text>{data.size.toFixed(0)}</Text>
+                              </Flex>
+                            ))
+                          ) : (
+                            <Text size="sm" color="gray">
+                              No players in the lobby at the moment
+                            </Text>
+                          )}
+                        </Flex>
+                        {!lobby.archived && (
+                          <Button
+                            size="compact-md"
+                            color="purple"
+                            variant="white"
+                            leftSection={<IconBrandDiscord />}
+                          >
+                            Invite friends
+                          </Button>
                         )}
                       </Flex>
                     </Stack>
