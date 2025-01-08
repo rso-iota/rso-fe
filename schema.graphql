@@ -1,0 +1,29 @@
+schema {
+  query: Query
+}
+
+"""
+The @defer directive may be specified on a fragment spread to imply de-prioritization, that causes the fragment to be omitted in the initial response, and delivered as a subsequent response afterward. A query with @defer directive will cause the request to potentially return multiple responses, where non-deferred data is delivered in the initial response and data deferred delivered in a subsequent response. @include and @skip take precedence over @defer.
+"""
+directive @defer(if: Boolean = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type GlobalStats {
+  botDeaths: Int!
+  botFoodEaten: Int!
+  botKills: Int!
+  playerDeaths: Int!
+  playerFoodEaten: Int!
+  playerKills: Int!
+}
+
+type Player {
+  deaths: Int!
+  foodEaten: Int!
+  kills: Int!
+}
+
+type Query {
+  player(id: ID!): Player
+  players(ids: [ID]): [Player]
+  stats: GlobalStats
+}

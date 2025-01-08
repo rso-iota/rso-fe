@@ -30,12 +30,15 @@ import { useDisclosure } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import { showNotification } from "@mantine/notifications";
 import {
+  IconBurger,
   IconHash,
   IconLogout,
   IconPlayerPlay,
   IconPlus,
   IconRefresh,
   IconServer,
+  IconSkull,
+  IconSword,
   IconTopologyRing,
   IconTrash,
   IconUser,
@@ -47,10 +50,32 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
+import { graphql } from "@/graphql";
+import { execute } from "@/graphql/execute";
+import { useQuery } from "@tanstack/react-query";
+
 const schema = z.object({
   name: z.string().min(2).max(20),
   maxPlayers: z.number().min(2).max(9),
 });
+
+const playerStatsQuery = graphql(`
+  query Query($ids: [ID]) {
+    players(ids: $ids) {
+      deaths
+      foodEaten
+      kills
+    }
+    stats {
+      botDeaths
+      botKills
+      botFoodEaten
+      playerDeaths
+      playerKills
+      playerFoodEaten
+    }
+  }
+`);
 
 type LobbyForm = z.infer<typeof schema>;
 
@@ -69,17 +94,39 @@ const Lobby = () => {
 
   const { data, queryKey, refetch, isFetching } = useGetLobbyList();
   const { mutateAsync: createLobbyApi } = useCreateLobby();
-  const { data: usersData } = useGetOnlineUsers();
+  const { data: usersData, refetch: refetchUsers } = useGetOnlineUsers();
+
+  const playerIds = (usersData || []).map((user) => user.id);
+
+  const { data: statistics, refetch: refetchStats } = useQuery({
+    queryKey: playerIds,
+    queryFn: () => execute(playerStatsQuery, { ids: playerIds }),
+  });
+
+  const playersWithStats = (usersData || []).map((user, i) => {
+    const stats = statistics?.players?.[i] ?? {
+      deaths: 0,
+      foodEaten: 0,
+      kills: 0,
+    };
+    return {
+      ...user,
+      deaths: stats?.deaths,
+      foodEaten: stats?.foodEaten,
+      kills: stats?.kills,
+    };
+  });
 
   // refecth lobby data every 10 seconds
-
   useEffect(() => {
     const interval = setInterval(() => {
       refetch();
+      refetchUsers();
+      refetchStats();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [refetch]);
+  }, [refetch, refetchUsers, refetchStats]);
 
   const { mutateAsync: deleteLobbyApi } = useDeleteLobby();
 
@@ -217,25 +264,50 @@ const Lobby = () => {
           Online
         </Text>
         <Flex gap="sm" direction="column">
-          {(usersData || []).map((user) => (
+          {(playersWithStats || []).map((user) => (
             <Paper p="sm" px="lg" withBorder key={user.username}>
               <Flex justify="space-between" align="center">
                 <Avatar color="blue" size="sm">
                   {user.username.charAt(0).toUpperCase()}
                 </Avatar>
+                <IconBurger />
+                <Text size="sm">{user.foodEaten}</Text>
+                <IconSword />
+                <Text size="sm">{user.kills}</Text>
+                <IconSkull />
+                <Text size="sm">{user.deaths}</Text>
 
                 <Flex direction="column">
                   <Text size="sm" fw="bold">
                     {user.username}
                   </Text>
-
-                  <Badge variant="light" size="xs">
-                    Id za Mateja:) {user.id}
-                  </Badge>
                 </Flex>
               </Flex>
             </Paper>
           ))}
+          <Text size="sm" fw={900} mb="sm">
+            Global statistics
+          </Text>
+          <Flex gap="sm" direction="column">
+            Players
+            <Flex gap="sm">
+              <IconBurger />
+              <Text size="sm">{statistics?.stats?.playerFoodEaten}</Text>
+              <IconSword />
+              <Text size="sm">{statistics?.stats?.playerKills}</Text>
+              <IconSkull />
+              <Text size="sm">{statistics?.stats?.playerDeaths}</Text>
+            </Flex>
+            Bot uprising
+            <Flex gap="sm">
+              <IconBurger />
+              <Text size="sm">{statistics?.stats?.botFoodEaten}</Text>
+              <IconSword />
+              <Text size="sm">{statistics?.stats?.botKills}</Text>
+              <IconSkull />
+              <Text size="sm">{statistics?.stats?.botDeaths}</Text>
+            </Flex>
+          </Flex>
         </Flex>
       </AppShell.Navbar>
 
