@@ -10,8 +10,8 @@ type WithoutIndexSignature<T> = {
   [K in keyof T as string extends K
     ? never
     : number extends K
-    ? never
-    : K]: T[K];
+      ? never
+      : K]: T[K];
 };
 
 type CustomEnv = Omit<
@@ -25,6 +25,7 @@ const projectEnvVariables: CustomEnv = {
   VITE_KC_AUTHORITY: "${VITE_KC_AUTHORITY}",
   VITE_KC_CLIENT_ID: "${VITE_KC_CLIENT_ID}",
   VITE_BACKEND_API: "${VITE_BACKEND_API}",
+  VITE_DISCORD_WEBHOOK: "${VITE_DISCORD_WEBHOOK}",
 };
 
 const getProjectEnvVariables = (): CustomEnv => {

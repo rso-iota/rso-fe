@@ -65,6 +65,8 @@ import { graphql } from "@/graphql";
 import { execute } from "@/graphql/execute";
 import { QueryQuery } from "@/graphql/graphql";
 import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { ENV } from "@/shared/projectEnvVariables";
 
 const schema = z.object({
   name: z.string().min(2).max(20),
@@ -484,6 +486,20 @@ const Lobby = () => {
                             color="purple"
                             variant="white"
                             leftSection={<IconBrandDiscord />}
+                            onClick={() => {
+                              axios
+                                .post(ENV.VITE_DISCORD_WEBHOOK, {
+                                  url:
+                                    window.location.origin +
+                                    `/game/${lobby.serverId}/${lobby.gameId}`,
+                                })
+                                .then(() => {
+                                  showNotification({
+                                    title: "Notification sent",
+                                    message: "Notification sent to discord",
+                                  });
+                                });
+                            }}
                           >
                             Invite friends
                           </Button>

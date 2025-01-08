@@ -1,6 +1,4 @@
 import { Button, Container, Flex, Stack, Text } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
-
 import { Physics } from "@react-three/cannon";
 import {
   Center,
@@ -11,7 +9,7 @@ import {
 } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Suspense, useEffect, useRef } from "react";
-
+import { useAuth } from "react-oidc-context";
 import * as THREE from "three";
 
 function Hero() {
@@ -89,6 +87,8 @@ const Landing = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const controlsRef = useRef<any>(null);
 
+  const auth = useAuth();
+
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
       if (controlsRef.current) {
@@ -110,8 +110,6 @@ const Landing = () => {
       window.removeEventListener("mousemove", handleMouseMove);
     };
   }, []);
-
-  const navigate = useNavigate();
 
   return (
     <Flex
@@ -150,7 +148,9 @@ const Landing = () => {
               size="xl"
               variant="gradient"
               onClick={() => {
-                navigate("/lobby");
+                auth.signinRedirect({
+                  redirect_uri: `${window.location.origin}${window.location.pathname}lobby`,
+                });
               }}
               fw={900}
               gradient={{ from: "orange", to: "red", deg: 330 }}
