@@ -13,9 +13,11 @@ import {
   Box,
   Burger,
   Button,
+  Center,
   Container,
   Flex,
   Group,
+  Loader,
   Modal,
   NumberInput,
   Paper,
@@ -42,17 +44,19 @@ import {
   IconTopologyRing,
   IconTrash,
   IconUser,
+  IconVideo,
 } from "@tabler/icons-react";
 import { useAuth } from "react-oidc-context";
 
 import { useForm, zodResolver } from "@mantine/form";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { graphql } from "@/graphql";
 import { execute } from "@/graphql/execute";
 import { useQuery } from "@tanstack/react-query";
+import { AXIOS_INSTANCE } from "@/api/mutator/custom-instance";
 
 const schema = z.object({
   name: z.string().min(2).max(20),
@@ -403,7 +407,10 @@ const Lobby = () => {
                             )}
                           </Group>
                         ) : (
-                          <Text c="dimmed">Archived</Text>
+                          <Group>
+                            <VideoStreamModal gameId={lobby.gameId} />
+                            <Text c="dimmed">Archived</Text>
+                          </Group>
                         )}
                       </Flex>
                       <Flex gap="sm">
@@ -443,7 +450,6 @@ const Lobby = () => {
                           Game id: {lobby.gameId}
                         </Badge>
                       </Flex>
-
                       <Flex gap={"xs"}>
                         {lobby.currentPlayers > 0 ? (
                           (lobby.liveData || []).map((data) => (
@@ -475,6 +481,72 @@ const Lobby = () => {
         </Flex>
       </AppShell.Main>
     </AppShell>
+  );
+};
+
+const VideoStreamModal = ({ gameId }: { gameId: string }) => {
+  const [opened, setOpened] = useState(false);
+  const [videoSrc, setVideoSrc] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const fetchVideoFile = async () => {
+    setLoading(true);
+    try {
+      const response = await AXIOS_INSTANCE.get(
+        `/api/v1/replays/${gameId}/video?fps=10&speed=10`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const blob = response.data;
+      const videoUrl = URL.createObjectURL(blob);
+
+      setVideoSrc(videoUrl);
+    } catch (error) {
+      console.error("Error fetching video file:", error);
+      setVideoSrc("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpen = () => {
+    setOpened(true);
+    fetchVideoFile();
+  };
+
+  const handleClose = () => {
+    setOpened(false);
+    setVideoSrc(""); // Clean up video source
+  };
+
+  return (
+    <div>
+      <Button onClick={handleOpen}>
+        <IconVideo />
+      </Button>
+
+      <Modal
+        opened={opened}
+        onClose={handleClose}
+        title={`Replay of game ${gameId}`}
+        size="lg"
+      >
+        {loading ? (
+          <Center>
+            <Loader size="lg" />
+          </Center>
+        ) : videoSrc ? (
+          <video controls autoPlay style={{ width: "100%" }}>
+            <source src={videoSrc} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        ) : (
+          <p>Failed to load video file.</p>
+        )}
+      </Modal>
+    </div>
   );
 };
 
