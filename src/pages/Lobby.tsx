@@ -3,7 +3,6 @@ import {
   useDeleteLobby,
   useGetLobbyList,
 } from "@/api/lobby/lobby/lobby";
-import Autoplay from "embla-carousel-autoplay";
 import { useGetOnlineUsers } from "@/api/users/users/users";
 import { queryClient } from "@/queryClient";
 import {
@@ -46,25 +45,25 @@ import {
   IconServer,
   IconSkull,
   IconSword,
-  IconTable,
   IconTopologyRing,
   IconTrash,
   IconUser,
   IconVideo,
 } from "@tabler/icons-react";
+import Autoplay from "embla-carousel-autoplay";
 import { useAuth } from "react-oidc-context";
 
+import { Carousel } from "@mantine/carousel";
 import { useForm, zodResolver } from "@mantine/form";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Carousel } from "@mantine/carousel";
 
+import { AXIOS_INSTANCE } from "@/api/mutator/custom-instance";
 import { graphql } from "@/graphql";
 import { execute } from "@/graphql/execute";
-import { useQuery } from "@tanstack/react-query";
-import { AXIOS_INSTANCE } from "@/api/mutator/custom-instance";
 import { QueryQuery } from "@/graphql/graphql";
+import { useQuery } from "@tanstack/react-query";
 
 const schema = z.object({
   name: z.string().min(2).max(20),
@@ -88,8 +87,6 @@ const playerStatsQuery = graphql(`
     }
   }
 `);
-
-type GlobalStats = typeof playerStatsQuery;
 
 type LobbyForm = z.infer<typeof schema>;
 
